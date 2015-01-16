@@ -1,0 +1,214 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>HTML/Javascript Test</title>
+	<link rel="stylesheet" href="chosen.css">
+	<style type="text/css" media="all">
+		/* fix rtl for demo */
+		.chosen-rtl .chosen-drop { left: -9000px; }
+	</style>	
+	<script type="text/javascript" src="jquery-1.11.2.js"> </script>
+	<script type="text/javascript" src="chosen.jquery.js"> </script>
+	<script type="text/javascript" src="jquery.blockUI.js"> </script>
+    <script type="text/javascript">
+        //****************************** Begin of Your Javascript *****************************************************************************************************
+        // Please write you javascript here.
+		// First, checks if it isn't implemented yet.
+		if (!String.prototype.format) {
+			String.prototype.format = function() {
+				var args = arguments;
+				return this.replace(/{(\d+)}/g, function(match, number) { 
+					return typeof args[number] != 'undefined'	? args[number] : match;
+				});
+			};
+		}
+		
+		var url = 'http://api.geonames.org/';
+		var username = 'codereasonlin';
+		var gmapUrl = 'https://www.google.com/maps/embed/v1/view?key=AIzaSyAoPt3wE_-JoHd3OOPJqrkjqR0Pezt3wyo&center={0},{1}&zoom=10&maptype=satellite';
+		
+		var countryList = null;
+		var cityList = null;
+		
+		function GeoWebService() {
+			return {
+				getContinentAndCountry: function() {
+					$.blockUI();
+					$.ajax({
+						url: url + 'countryInfoJSON',
+						data: {
+							username: username
+						},
+						type: 'GET',
+						dataType: 'jsonp',
+						
+						success: function(o) {
+							countryList = o.geonames;
+							afterGetCountry();
+							$.unblockUI();
+						},
+						
+						error: function(xhr, ajaxOptions, thrownError) {
+							debugger;
+							$.unblockUI();
+						}						
+					});
+				},
+				
+				getCities: function(countryCode, lang) {
+					$.blockUI();
+					$.ajax({
+						url: url + 'searchJSON',
+						data: {
+							username: username,
+							country: countryCode,
+							lang: lang,
+							featureClass: 'P'
+						},
+						type: 'GET',
+						dataType: 'jsonp',
+						
+						success: function(o) {
+							cityList = o.geonames;
+							afterGetCities();
+							$.unblockUI();
+						},
+						
+						error: function(xhr, ajaxOptions, thrownError) {
+							debugger;
+							$.unblockUI();
+						}
+					});
+				}
+			};
+		}
+		
+		function continentSelected() {
+			var continentCode = '';
+			$('input:checked').each(function() {
+				continentCode += $(this).val() + ',';
+			});
+			
+			$('#countrySelect option').each(function() {
+				var continent = $(this).attr('continent');
+				if(!continent)
+					return;
+				if(continentCode.indexOf(continent) < 0)
+					$(this).attr('disabled', '');
+				else
+					$(this).removeAttr('disabled');
+			});
+			$('#countrySelect').trigger("chosen:updated");
+		}
+		
+		function afterGetCountry()
+		{
+			for(var i = 0; i < countryList.length; i++) {
+				var country = countryList[i];
+				var option = '';
+				option = '<option value="{0}" lang="{1}" continent="{2}" geonameId="{3}">{4}</option>'.format(country.countryCode, country.languages.substr(0,2), country.continent, country.geonameId, country.countryName);
+				$('#countrySelect').append(option);
+			}
+			$('#countrySelect').trigger('chosen:updated');
+		
+			continentSelected();
+		}
+		
+		function afterGetCities()
+		{
+			
+			$('#citySelect').empty().append('<option value=""></option>');
+			for(var i = 0; i < cityList.length; i++) {
+				var city = cityList[i];
+				var option = '';
+				option = '<option value="{0}" lat="{1}" lng="{2}">{3}</option>'.format(city.geonameId, city.lat, city.lng, city.name);
+				$('#citySelect').append(option);
+			}
+			$('#citySelect').trigger('chosen:updated');
+		}
+		
+		function afterSelectCountry()
+		{
+			var selected = $('#countrySelect').find(':selected');
+			var countryCode = selected.val();
+			var lang = selected.attr('lang');
+			GeoWebService().getCities(countryCode, lang);
+		}
+		
+		function afterSelectCity()
+		{
+			var selected = $('#citySelect').find(':selected');
+			var lat = selected.attr('lat');
+			var lng = selected.attr('lng');
+			
+			$('#googlemap').attr('src', gmapUrl.format(lat, lng)); 
+		}
+		
+		function onLoad() {
+			GeoWebService().getContinentAndCountry();
+			
+			$('.cs').chosen({display_disabled_options: false});			
+			$(':checkbox').change(continentSelected);
+			$('#countrySelect').chosen().change(afterSelectCountry);
+			$('#citySelect').chosen().change(afterSelectCity);
+		}
+		
+		window.onload = onLoad;
+        //****************************** End of Your Javascript *****************************************************************************************************
+	</script>
+</head>
+<body>
+                <!-- ***************************************************************** start of your implementation of HTML ******************************************************** -->
+                <h2>
+                    Your implemetation</h2>
+                <table>
+                    <tr>
+                        <td>
+                            Continent
+                        </td>
+                        <td>
+                            <input type="checkbox" value="AF" checked="checked" />Africa
+                            <input type="checkbox" value="AS" />Asia
+                            <input type="checkbox" value="EU" />Europe
+                            <input type="checkbox" value="NA" />North American
+                            <br />
+                            <input type="checkbox" value="OC" />Oceania
+                            <input type="checkbox" value="SA" />South American
+							<input type="checkbox" value="AN" />Anetatika
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Country
+                        </td>
+                        <td>
+                            <select id="countrySelect" data-placeholder="Choose a Country..." class="cs" style="width:250px;">
+                                <option value=""></option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            City
+                        </td>
+                        <td>
+                            <select id="citySelect" data-placeholder="Choose a City..." class="cs" style="width:250px;">
+                                <option value=""></option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" height="20px">
+                            &nbsp;
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <b>Google map position</b><br />
+                        </td>
+                    </tr>
+                </table>
+				<iframe id="googlemap" width="600" height="450" frameborder="0" style="border:0" src=""></iframe>
+                <!-- ***************************************************************** end of your implementation of HTML ******************************************************** -->
+</body>
+</html>
